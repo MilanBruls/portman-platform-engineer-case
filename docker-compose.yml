@@ -1,0 +1,29 @@
+# Local stack for the Portman case: a TimescaleDB database and the mock market-data vendor.
+#   docker load -i vendor/mock-lseg-image.tar   (once)
+#   docker compose up -d
+# Database:  postgres://portman_admin:portman_admin@localhost:5432/portman   (local only, not a real secret)
+# Vendor:    http://localhost:8080   app key: portman-case-key
+services:
+  db:
+    image: timescale/timescaledb:2.17.2-pg16
+    environment:
+      POSTGRES_DB: portman
+      POSTGRES_USER: portman_admin
+      POSTGRES_PASSWORD: portman_admin
+    ports: ["5432:5432"]
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portman_admin -d portman"]
+      interval: 5s
+      retries: 20
+  vendor:
+    image: portman-case/mock-lseg:1.0     # load it first: docker load -i vendor/mock-lseg-image.tar
+    environment:
+      VENDOR_APP_KEY: portman-case-key
+      VENDOR_DAILY_QUOTA: "1500"
+      VENDOR_RATE_PER_SEC: "5"
+    ports: ["8080:8080"]
+    volumes: [vendorstate:/state]
+volumes:
+  dbdata:
+  vendorstate:
